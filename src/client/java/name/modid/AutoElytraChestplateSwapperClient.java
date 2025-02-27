@@ -2,44 +2,58 @@ package name.modid;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.world.World;
 
 public class AutoElytraChestplateSwapperClient implements ClientModInitializer {
-    public static KeyBinding spaceBar;
-
-    public void initializeKeybinding() {
-        KeyBinding binding = new KeyBinding("key.mod.jumpaction", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_SPACE, "key.categories.mod");
-        spaceBar = KeyBindingHelper.registerKeyBinding(binding);
-    }
+    public static int airFrames = 0;
 
     @Override
     public void onInitializeClient() {
-        initializeKeybinding();
         ClientTickEvents.END_CLIENT_TICK.register(this::clientTick);
+        UseItemCallback.EVENT.register(this::itemUseCallback);
+    }
+
+    private ActionResult itemUseCallback(PlayerEntity playerEntity, World world, Hand hand) {
+        ItemStack itemStack = playerEntity.getStackInHand(hand);
+
+        if (itemStack.getItem() == Items.FIREWORK_ROCKET && !playerEntity.isOnGround()) {
+            swapChestplate(playerEntity, MinecraftClient.getInstance(), Swap.ToElytra);
+            playerEntity.startGliding();
+        }
+
+        return ActionResult.PASS;
     }
 
     public void clientTick(MinecraftClient client) {
-        if (spaceBar.wasPressed()) {
-            ClientPlayerEntity player = client.player;
-            assert player != null;
-            boolean inAir = !player.isOnGround();
+        ClientPlayerEntity player = client.player;
+        if (player == null) return;
 
-            if (inAir) {
+        boolean onGround = player.isOnGround();
+        boolean spaceKey = client.options.jumpKey.wasPressed();
+
+        if (airFrames > 0) {
+            if (onGround) {
+                swapChestplate(player, client, Swap.ToChestplate);
+            } else if (spaceKey) {
                 swapChestplate(player, client, Swap.ToElytra);
+                player.startGliding();
             }
         }
+
+        airFrames = onGround ? 0 : airFrames + 1;
     }
 
     public enum Swap {
@@ -49,6 +63,10 @@ public class AutoElytraChestplateSwapperClient implements ClientModInitializer {
     // Stolen from https://github.com/Saphjyr/ElytraChestplateSwapper, with a few modifications by me
     // https://github.com/Saphjyr/ElytraChestplateSwapper/blob/eacfe87dad8aec1869cd8b954d7e3bfa1aeb10f5/src/main/java/com/saphjyr/ElytraChestplateSwapper/InventoryUtils.java#L15
     public static void swapChestplate(PlayerEntity player, MinecraftClient client, Swap swap) {
+        player.sendMessage(Text.of("Switching to " + switch (swap) {
+            case ToElytra -> "elytra";
+            case ToChestplate -> "chestplate";
+        }), true);
         int HOTBAR_SIZE = PlayerInventory.getHotbarSize(); // 9
         int MAIN_SIZE = PlayerInventory.MAIN_SIZE; // 36
         int TOTAL_SIZE = MAIN_SIZE + 1; // 37
