@@ -12,7 +12,6 @@ import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
@@ -63,10 +62,6 @@ public class AutoElytraChestplateSwapperClient implements ClientModInitializer {
     // Stolen from https://github.com/Saphjyr/ElytraChestplateSwapper, with a few modifications by me
     // https://github.com/Saphjyr/ElytraChestplateSwapper/blob/eacfe87dad8aec1869cd8b954d7e3bfa1aeb10f5/src/main/java/com/saphjyr/ElytraChestplateSwapper/InventoryUtils.java#L15
     public static void swapChestplate(PlayerEntity player, MinecraftClient client, Swap swap) {
-        player.sendMessage(Text.of("Switching to " + switch (swap) {
-            case ToElytra -> "elytra";
-            case ToChestplate -> "chestplate";
-        }), true);
         int HOTBAR_SIZE = PlayerInventory.getHotbarSize(); // 9
         int MAIN_SIZE = PlayerInventory.MAIN_SIZE; // 36
         int TOTAL_SIZE = MAIN_SIZE + 1; // 37
